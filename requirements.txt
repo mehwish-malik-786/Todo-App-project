@@ -1,0 +1,6 @@
+# Requirements for Todo App - Phase I
+# This application uses only Python standard library
+# No external dependencies required
+
+# Python version requirement
+# Python 3.13+ required
