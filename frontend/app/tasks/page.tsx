@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiClient, Task } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -11,11 +12,17 @@ export default function TasksPage() {
   const [newTask, setNewTask] = useState({ title: '', description: '' });
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const router = useRouter();
 
-  // Load tasks on component mount
+  // Check if user is authenticated on component mount
   useEffect(() => {
+    if (!apiClient.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
     fetchTasks();
-  }, [filter]);
+  }, [filter, router]);
 
   const fetchTasks = async () => {
     try {
@@ -23,6 +30,11 @@ export default function TasksPage() {
       const data = await apiClient.getTasks(filter);
       setTasks(data);
     } catch (err) {
+      // If unauthorized, redirect to login
+      if (err instanceof Error && err.message === 'Unauthorized') {
+        router.push('/login');
+        return;
+      }
       setError('Failed to load tasks');
       console.error(err);
     } finally {
@@ -32,18 +44,23 @@ export default function TasksPage() {
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newTask.title.trim()) return;
-    
+
     try {
       const createdTask = await apiClient.createTask({
         title: newTask.title,
         description: newTask.description || undefined,
       });
-      
+
       setTasks([...tasks, createdTask]);
       setNewTask({ title: '', description: '' });
     } catch (err) {
+      // If unauthorized, redirect to login
+      if (err instanceof Error && err.message === 'Unauthorized') {
+        router.push('/login');
+        return;
+      }
       setError('Failed to add task');
       console.error(err);
     }
@@ -51,18 +68,23 @@ export default function TasksPage() {
 
   const handleUpdateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!editingTask) return;
-    
+
     try {
       const updatedTask = await apiClient.updateTask(editingTask.id, {
         title: editingTask.title,
         description: editingTask.description || undefined,
       });
-      
+
       setTasks(tasks.map(task => task.id === updatedTask.id ? updatedTask : task));
       setEditingTask(null);
     } catch (err) {
+      // If unauthorized, redirect to login
+      if (err instanceof Error && err.message === 'Unauthorized') {
+        router.push('/login');
+        return;
+      }
       setError('Failed to update task');
       console.error(err);
     }
@@ -73,6 +95,11 @@ export default function TasksPage() {
       await apiClient.deleteTask(id);
       setTasks(tasks.filter(task => task.id !== id));
     } catch (err) {
+      // If unauthorized, redirect to login
+      if (err instanceof Error && err.message === 'Unauthorized') {
+        router.push('/login');
+        return;
+      }
       setError('Failed to delete task');
       console.error(err);
     }
@@ -83,8 +110,25 @@ export default function TasksPage() {
       const updatedTask = await apiClient.toggleTaskCompletion(id);
       setTasks(tasks.map(task => task.id === id ? updatedTask : task));
     } catch (err) {
+      // If unauthorized, redirect to login
+      if (err instanceof Error && err.message === 'Unauthorized') {
+        router.push('/login');
+        return;
+      }
       setError('Failed to update task status');
       console.error(err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await apiClient.logout();
+      router.push('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+      // Even if logout API fails, clear local token and redirect
+      localStorage.removeItem('auth_token');
+      router.push('/login');
     }
   };
 
@@ -98,6 +142,12 @@ export default function TasksPage() {
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Your Tasks</h1>
+        <button
+          onClick={handleLogout}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+        >
+          Logout
+        </button>
       </div>
 
       {error && (
@@ -120,9 +170,9 @@ export default function TasksPage() {
               type="text"
               id="title"
               value={editingTask ? editingTask.title : newTask.title}
-              onChange={(e) => 
-                editingTask 
-                  ? setEditingTask({...editingTask, title: e.target.value}) 
+              onChange={(e) =>
+                editingTask
+                  ? setEditingTask({...editingTask, title: e.target.value})
                   : setNewTask({...newTask, title: e.target.value})
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
@@ -137,9 +187,9 @@ export default function TasksPage() {
             <textarea
               id="description"
               value={editingTask ? editingTask.description || '' : newTask.description}
-              onChange={(e) => 
-                editingTask 
-                  ? setEditingTask({...editingTask, description: e.target.value}) 
+              onChange={(e) =>
+                editingTask
+                  ? setEditingTask({...editingTask, description: e.target.value})
                   : setNewTask({...newTask, description: e.target.value})
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"

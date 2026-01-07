@@ -14,8 +14,9 @@ app.add_middleware(
 )
 
 # Import and create database tables
-from app.models import task
+from app.models import task, user
 task.create_db_and_tables()
+user.create_db_and_tables()
 
 @app.get("/")
 def read_root():
@@ -26,5 +27,6 @@ def health_check():
     return {"status": "healthy"}
 
 # Include API routes
-from app.routes import tasks
+from app.routes import tasks, auth
 app.include_router(tasks.router, prefix="/api", tags=["tasks"])
+app.include_router(auth.router, prefix="/api", tags=["auth"])

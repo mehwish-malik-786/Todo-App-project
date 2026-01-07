@@ -2,41 +2,27 @@
 'use client';
 
 import { useState } from 'react';
+import { apiClient } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // In a real implementation, this would call an auth API
-    // For now, we'll just log the credentials
-    console.log('Login attempt with:', { email, password });
-    
-    // Placeholder for actual authentication logic
+
     try {
-      // This is where you would make an API call to authenticate
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password })
-      // });
-      
-      // if (response.ok) {
-      //   // Store the JWT token and redirect to tasks page
-      //   const data = await response.json();
-      //   localStorage.setItem('token', data.token);
-      //   window.location.href = '/tasks';
-      // } else {
-      //   setError('Invalid credentials');
-      // }
-      
-      // For now, just redirect to tasks page
-      window.location.href = '/tasks';
+      // Call the login API
+      await apiClient.login(email, password);
+
+      // Redirect to tasks page on successful login
+      router.push('/tasks');
+      router.refresh(); // Refresh to update the UI
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError('Invalid email or password');
       console.error(err);
     }
   };
@@ -99,7 +85,7 @@ export default function LoginPage() {
               Sign in
             </button>
           </div>
-          
+
           <div className="text-sm text-center">
             <a href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
               Don't have an account? Register
